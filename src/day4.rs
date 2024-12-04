@@ -119,7 +119,11 @@ fn first(
 
     let mut xmas_count = 0;
     for (row_idx, row) in puzzle.data.iter().enumerate() {
-        for (col_idx, _) in row.iter().enumerate() {
+        for (col_idx, value) in row.iter().enumerate() {
+            if value != &Value::X {
+                continue;
+            }
+
             let results = puzzle.iterate(row_idx, col_idx, &translations);
             xmas_count += results.iter().filter(|word| **word == xmas).count();
         }
@@ -147,7 +151,11 @@ fn second(
 
     let mut xmas_count = 0;
     for (row_idx, row) in puzzle.data.iter().enumerate() {
-        for (col_idx, _) in row.iter().enumerate() {
+        for (col_idx, value) in row.iter().enumerate() {
+            if value != &Value::A {
+                continue;
+            }
+
             let results = puzzle.iterate(row_idx, col_idx, &translations);
             if results.iter().all(|word| *word == mas || *word == sam) {
                 xmas_count += 1;

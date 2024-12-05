@@ -18,7 +18,10 @@ use nom::{
     Finish,
     IResult,
 };
-use std::collections::HashSet;
+use std::collections::{
+    HashMap,
+    HashSet,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct OrderingRule {
@@ -28,7 +31,7 @@ struct OrderingRule {
 
 #[derive(Clone, Debug)]
 struct Puzzle {
-    rules: Vec<OrderingRule>,
+    left_to_right: HashMap<i32, HashSet<i32>>,
     updates: Vec<Vec<i32>>,
 }
 
@@ -39,28 +42,33 @@ struct Updates {
 }
 
 impl Puzzle {
+    fn new(
+        rules: Vec<OrderingRule>,
+        updates: Vec<Vec<i32>>,
+    ) -> Self {
+        let left_to_right: HashMap<i32, HashSet<i32>> =
+            rules.iter().fold(HashMap::new(), |mut acc, rule| {
+                acc.entry(rule.left).or_default().insert(rule.right);
+                acc
+            });
+
+        Self {
+            left_to_right,
+            updates,
+        }
+    }
+
     fn is_safe_update(
         &self,
         update: &[i32],
     ) -> bool {
         for (idx, value) in update.iter().enumerate() {
-            let mut pages_before = HashSet::new();
-            let mut pages_after = HashSet::new();
-
-            for rule in self.rules.iter() {
-                if rule.left == *value {
-                    pages_after.insert(rule.right);
-                }
-
-                if rule.right == *value {
-                    pages_before.insert(rule.left);
-                }
-            }
-
-            let before_safe = update[0..idx].iter().all(|b| !pages_after.contains(b));
-            let after_safe = update[idx..].iter().all(|a| !pages_before.contains(a));
-
-            if !before_safe || !after_safe {
+            let pages_after = self
+                .left_to_right
+                .get(value)
+                .unwrap_or(&HashSet::new())
+                .clone();
+            if !update[0..idx].iter().all(|b| !pages_after.contains(b)) {
                 return false;
             }
         }
@@ -104,7 +112,7 @@ fn parse(input: &str) -> IResult<&str, Puzzle> {
 
     all_consuming(map(
         separated_pair(rules, line_ending, updates),
-        |(rules, updates)| Puzzle { rules, updates },
+        |(rules, updates)| Puzzle::new(rules, updates),
     ))(input)
 }
 
@@ -138,15 +146,19 @@ fn second(
             .iter()
             .copied()
             .sorted_by(|a, b| {
-                if puzzle.rules.contains(&OrderingRule {
-                    left: *b,
-                    right: *a,
-                }) {
+                if puzzle
+                    .left_to_right
+                    .get(b)
+                    .is_some_and(|set| set.contains(a))
+                {
+                    // Check if there is a rule stating that b is before a
                     std::cmp::Ordering::Greater
-                } else if puzzle.rules.contains(&OrderingRule {
-                    left: *a,
-                    right: *b,
-                }) {
+                } else if puzzle
+                    .left_to_right
+                    .get(a)
+                    .is_some_and(|set| set.contains(b))
+                {
+                    // Check is there is a rule stating that a is before b
                     std::cmp::Ordering::Less
                 } else {
                     std::cmp::Ordering::Equal

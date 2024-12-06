@@ -64,7 +64,6 @@ impl Puzzle {
     fn move_guard(&mut self) -> Outcome {
         let mut outcome = Outcome::Continue;
         let guard = self.guard();
-        let mut new_values = self.values.clone();
 
         if let Some(((row_idx, col_idx), direction)) = guard {
             if self
@@ -80,7 +79,7 @@ impl Puzzle {
                     .or_default()
                     .insert(direction);
                 if let Some((new_row_idx, new_col_idx)) = self.next(row_idx, col_idx, direction) {
-                    let next_value = new_values[new_row_idx][new_col_idx];
+                    let next_value = self.values[new_row_idx][new_col_idx];
 
                     if next_value == Value::Obstruction {
                         // Turn right
@@ -91,19 +90,17 @@ impl Puzzle {
                             Direction::Right => Direction::Down,
                         };
 
-                        new_values[row_idx][col_idx] = Value::Guard(new_direction);
+                        self.values[row_idx][col_idx] = Value::Guard(new_direction);
                     } else {
-                        new_values[new_row_idx][new_col_idx] = Value::Guard(direction);
-                        new_values[row_idx][col_idx] = Value::Empty;
+                        self.values[new_row_idx][new_col_idx] = Value::Guard(direction);
+                        self.values[row_idx][col_idx] = Value::Empty;
                     }
                 } else {
-                    new_values[row_idx][col_idx] = Value::Empty;
+                    self.values[row_idx][col_idx] = Value::Empty;
                     outcome = Outcome::OutOfBounds;
                 }
             }
         }
-
-        self.values = new_values;
 
         outcome
     }

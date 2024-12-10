@@ -24,48 +24,41 @@ struct Calibration {
 }
 
 impl Calibration {
-    fn find_combinations(
+    fn has_matching_combination(
         &self,
-        operators: Box<dyn Fn(&Operator, i64) -> Vec<Operator>>,
-    ) -> Vec<Operator> {
+        operators: Vec<Operator>,
+    ) -> bool {
         let mut combinations = Vec::new();
 
         for (idx, number) in self.numbers.iter().enumerate() {
             if idx == 0 {
-                combinations.push(Operator::Identity(*number));
+                combinations.push(*number);
             } else {
                 combinations = combinations
                     .iter()
-                    .flat_map(|op| operators(op, *number))
+                    .flat_map(|prev| {
+                        operators.iter().map(move |op| {
+                            match op {
+                                Operator::Add => prev + number,
+                                Operator::Multiply => prev * number,
+                                Operator::Concat => format!("{}{}", prev, number).parse().unwrap(),
+                            }
+                        })
+                    })
+                    .filter(|&num| num <= self.result)
                     .collect();
             }
         }
 
-        combinations
+        combinations.iter().any(|num| *num == self.result)
     }
 }
 
 #[derive(Clone, Debug)]
 enum Operator {
-    Identity(i64),
-    Add(Box<Operator>, Box<Operator>),
-    Multiply(Box<Operator>, Box<Operator>),
-    Concat(Box<Operator>, Box<Operator>),
-}
-
-impl Operator {
-    fn result(&self) -> i64 {
-        match self {
-            Operator::Identity(num) => *num,
-            Operator::Add(left, right) => left.result() + right.result(),
-            Operator::Multiply(left, right) => left.result() * right.result(),
-            Operator::Concat(left, right) => {
-                format!("{}{}", left.result(), right.result())
-                    .parse()
-                    .unwrap()
-            }
-        }
-    }
+    Add,
+    Multiply,
+    Concat,
 }
 
 fn parse(input: &str) -> IResult<&str, Vec<Calibration>> {
@@ -91,18 +84,7 @@ fn first(
     let res: i64 = calibrations
         .iter()
         .filter_map(|calibration| {
-            let combinations = calibration.find_combinations(Box::new(|op, number| {
-                vec![
-                    Operator::Add(Box::new(op.clone()), Box::new(Operator::Identity(number))),
-                    Operator::Multiply(Box::new(op.clone()), Box::new(Operator::Identity(number))),
-                ]
-            }));
-
-            let has_result = combinations
-                .iter()
-                .any(|op| op.result() == calibration.result);
-
-            if has_result {
+            if calibration.has_matching_combination(vec![Operator::Add, Operator::Multiply]) {
                 Some(calibration.result)
             } else {
                 None
@@ -122,19 +104,11 @@ fn second(
     let res: i64 = calibrations
         .iter()
         .filter_map(|calibration| {
-            let combinations = calibration.find_combinations(Box::new(|op, number| {
-                vec![
-                    Operator::Add(Box::new(op.clone()), Box::new(Operator::Identity(number))),
-                    Operator::Multiply(Box::new(op.clone()), Box::new(Operator::Identity(number))),
-                    Operator::Concat(Box::new(op.clone()), Box::new(Operator::Identity(number))),
-                ]
-            }));
-
-            let has_result = combinations
-                .iter()
-                .any(|op| op.result() == calibration.result);
-
-            if has_result {
+            if calibration.has_matching_combination(vec![
+                Operator::Add,
+                Operator::Multiply,
+                Operator::Concat,
+            ]) {
                 Some(calibration.result)
             } else {
                 None

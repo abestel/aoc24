@@ -1,10 +1,8 @@
 use nom::{
     branch::alt,
     character::complete::{
-        anychar,
         line_ending,
         none_of,
-        not_line_ending,
     },
     combinator::{
         all_consuming,
@@ -126,13 +124,7 @@ fn solve(
             let r_diff = r1 - r2;
             let c_diff = c1 - c2;
 
-            let expanded = [
-                expand(r1, c1, r_diff, c_diff, num_rows, num_cols, max_steps),
-                expand(r2, c2, r_diff, c_diff, num_rows, num_cols, max_steps),
-                expand(r1, c1, -r_diff, -c_diff, num_rows, num_cols, max_steps),
-                expand(r2, c2, -r_diff, -c_diff, num_rows, num_cols, max_steps),
-            ];
-            for (r, c) in expanded.iter().flatten() {
+            for (r, c) in expand(r1, c1, r_diff, c_diff, num_rows, num_cols, max_steps).iter() {
                 if !antinode_can_be_antenna && *r == r1 && *c == c1 {
                     continue;
                 }
